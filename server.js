@@ -4,6 +4,7 @@ const http = require('http');
 const socketio = require('socket.io');
 const mongoose = require('mongoose');
 const path = require('path');
+const cron = require('node-cron');
 const Player = require('./models/Player');
 
 const app = express();
@@ -35,26 +36,23 @@ let game = {
   players: {} // key: socket.id => { walletAddress, x, y, score, energy, sprite, baseSpeed }
 };
 
-// Choose a random NFT sprite (1 to 1000)
 function assignRandomSprite() {
   const num = Math.floor(Math.random() * 1000) + 1;
   return `assets/nfts/${num}.png`;
 }
 
-// Respawn coin at a random location
 function respawnCoin() {
   game.coin.x = Math.random() * 800;
   game.coin.y = Math.random() * 600;
 }
 
-// Check collision (circular collision)
 function checkCollision(player, coin) {
   const dx = player.x - coin.x;
   const dy = player.y - coin.y;
   return Math.hypot(dx, dy) < 30;
 }
 
-// Sabotage event: every 30 seconds, 5-second slowdown
+// Sabotage: every 30 seconds trigger a 5-second slowdown
 setInterval(() => {
   sabotageActive = true;
   io.emit('sabotage', { active: true, duration: 5000 });
@@ -71,11 +69,15 @@ setInterval(async () => {
   const timeLeft = game.duration - (Date.now() - game.startTime);
   if (timeLeft <= 0) {
     io.emit('gameOver', { players: game.players });
+    // Save scores to MongoDB and update weeklyScore as well
     for (let socketId in game.players) {
       const { walletAddress, score } = game.players[socketId];
       await Player.findOneAndUpdate(
         { walletAddress },
-        { score: score, lastOnline: new Date() },
+        { 
+          $inc: { weeklyScore: score },
+          $set: { lastOnline: new Date() }
+        },
         { upsert: true }
       );
     }
@@ -111,6 +113,7 @@ setInterval(async () => {
 // -----------------------
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
+  
   socket.on('login', async (walletAddress) => {
     socket.walletAddress = walletAddress;
     console.log(`Wallet ${walletAddress} logged in on socket ${socket.id}`);
@@ -137,10 +140,15 @@ io.on('connection', (socket) => {
       let speed = game.players[socket.id].baseSpeed;
       if (sabotageActive) speed *= 0.5;
       if (game.players[socket.id].energy < 20) speed *= 0.5;
-      // Update with provided coordinates (client sends new position)
       game.players[socket.id].x = data.x;
       game.players[socket.id].y = data.y;
       socket.broadcast.emit('playerMoved', { id: socket.id, x: data.x, y: data.y });
+    }
+  });
+  
+  socket.on('voiceSignal', (data) => {
+    if (data.to) {
+      io.to(data.to).emit('voiceSignal', { from: socket.id, signal: data.signal });
     }
   });
   
@@ -149,6 +157,32 @@ io.on('connection', (socket) => {
     delete game.players[socket.id];
     io.emit('playerLeft', { id: socket.id });
   });
+});
+
+// -----------------------
+// LEADERBOARD API ENDPOINT
+// -----------------------
+app.get('/api/leaderboard', async (req, res) => {
+  try {
+    // Return top 20 players by weeklyScore (descending)
+    const topPlayers = await Player.find().sort({ weeklyScore: -1 }).limit(20);
+    res.json({ success: true, players: topPlayers });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// -----------------------
+// WEEKLY SCORE RESET CRON JOB
+// -----------------------
+// Reset weeklyScore every Sunday at midnight (server time)
+cron.schedule('0 0 * * 0', async () => {
+  try {
+    await Player.updateMany({}, { $set: { weeklyScore: 0 } });
+    console.log('Weekly scores have been reset.');
+  } catch (err) {
+    console.error('Error resetting weekly scores:', err);
+  }
 });
 
 server.listen(PORT, () => {
