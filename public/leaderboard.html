@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Leaderboard - KASPER the Ghost</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap" rel="stylesheet">
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      font-family: 'Roboto Mono', monospace;
+      background: url('assets/kasperbg.png') no-repeat center center fixed;
+      background-size: cover;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+    #leaderboardContainer {
+      background: rgba(0, 0, 0, 0.85);
+      padding: 2rem;
+      border: 2px solid #7bf8f9;
+      border-radius: 10px;
+      text-align: center;
+      width: 90%;
+      max-width: 500px;
+    }
+    h1 {
+      margin-bottom: 1rem;
+      color: #7bf8f9;
+      text-shadow: 2px 2px 5px rgba(0,0,0,0.7);
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+    li {
+      padding: 0.5rem;
+      border-bottom: 1px dashed rgba(123,248,249,0.6);
+    }
+    li:last-child {
+      border-bottom: none;
+    }
+    button {
+      margin-top: 1rem;
+      padding: 0.75rem 1.5rem;
+      background: #7bf8f9;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: transform 0.3s ease;
+    }
+    button:hover {
+      transform: scale(1.05);
+    }
+  </style>
+</head>
+<body>
+  <div id="leaderboardContainer">
+    <h1>Weekly Leaderboard</h1>
+    <ul id="leaderboardList">Loading leaderboard...</ul>
+    <button id="backButton">Back to Game</button>
+  </div>
+  <script src="leaderboard.js"></script>
+</body>
+</html>
