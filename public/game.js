@@ -1,15 +1,17 @@
 // public/game.js
 
-// Socket.IO connection and global variables
+// --- Socket and Wallet Setup ---
 const socket = io();
-let walletAddress = localStorage.getItem('walletAddress'); // Retrieved from login page
+let walletAddress = localStorage.getItem('walletAddress'); // Set in login.js
 if (!walletAddress) {
+  // If no wallet address is found, redirect back to login.
   window.location.href = 'login.html';
 }
-let localVoiceStream = null;
-const voicePeers = {}; // Map socket.id => SimplePeer instance
 
-// DOM Elements
+let localVoiceStream = null;
+const voicePeers = {}; // For voice chat
+
+// --- DOM Elements ---
 const scoreboardDiv = document.getElementById('scores');
 const timeLeftDiv = document.getElementById('timeLeft');
 const sabotageNoticeDiv = document.getElementById('sabotageNotice');
@@ -20,22 +22,25 @@ const pttIndicator = document.getElementById('pttIndicator');
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-// Load coin image
+// --- Asset Loading ---
 const coinImg = new Image();
 coinImg.src = 'assets/coin.png';
+// For this demo, we use the single example image for players:
+const defaultSprite = 'assets/kasperexample.png';
 
-// Game state variables
+// --- Game State Variables ---
 let selfId = null;
-const players = {};  // key: socket.id, value: { x, y, walletAddress, score, energy, sprite, baseSpeed }
+const players = {};  // key: socket id, value: { x, y, walletAddress, score, energy, sprite, baseSpeed }
 let coin = { x: 0, y: 0 };
 let gameTimeLeft = 0;
 let sabotageActive = false;
 const spriteCache = {};
 
-// --- Voice Chat & Push-to-Talk ---
+// --- Voice Chat Initialization ---
 async function initVoiceChat() {
   try {
     localVoiceStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    // Disable audio by default (push-to-talk)
     localVoiceStream.getAudioTracks().forEach(track => track.enabled = false);
     console.log("Voice stream obtained");
   } catch (err) {
@@ -44,6 +49,7 @@ async function initVoiceChat() {
 }
 initVoiceChat();
 
+// Create a voice peer connection using SimplePeer.
 function createVoicePeer(peerId, initiator) {
   if (!localVoiceStream) return;
   const peer = new SimplePeer({
@@ -70,7 +76,7 @@ function createVoicePeer(peerId, initiator) {
   voicePeers[peerId] = peer;
 }
 
-// Push-to-talk: enable microphone while Spacebar is held.
+// --- Push-to-Talk Implementation ---
 document.addEventListener('keydown', (e) => {
   if (e.code === "Space" && localVoiceStream) {
     localVoiceStream.getAudioTracks().forEach(track => track.enabled = true);
@@ -85,7 +91,9 @@ document.addEventListener('keyup', (e) => {
 });
 
 // --- Socket.IO Event Handlers ---
-socket.on('connect', () => { selfId = socket.id; });
+socket.on('connect', () => {
+  selfId = socket.id;
+});
 socket.on('voiceSignal', (data) => {
   const fromId = data.from;
   if (!voicePeers[fromId]) {
@@ -94,10 +102,13 @@ socket.on('voiceSignal', (data) => {
   voicePeers[fromId].signal(data.signal);
 });
 socket.on('playerJoined', (data) => {
+  // When a player joins, add them to our players object.
   players[data.id] = data.player;
-  preloadSprite(data.player.sprite);
+  // Preload their sprite image.
+  preloadSprite(data.player.sprite || defaultSprite);
+  // Initiate voice chat if not self.
   if (localVoiceStream && data.id !== selfId) {
-    const initiator = selfId < data.id;
+    const initiator = selfId < data.id; // Arbitrary rule.
     createVoicePeer(data.id, initiator);
   }
 });
@@ -114,7 +125,9 @@ socket.on('playerLeft', (data) => {
     delete voicePeers[data.id];
   }
 });
-socket.on('coinRespawn', (newCoin) => { coin = newCoin; });
+socket.on('coinRespawn', (newCoin) => {
+  coin = newCoin;
+});
 socket.on('sabotage', (data) => {
   sabotageActive = data.active;
   sabotageNoticeDiv.textContent = sabotageActive ? "Sabotage Active!" : "";
@@ -124,7 +137,7 @@ socket.on('gameState', (state) => {
   gameTimeLeft = state.timeLeft;
   Object.keys(state.players).forEach(id => {
     players[id] = state.players[id];
-    preloadSprite(players[id].sprite);
+    preloadSprite(players[id].sprite || defaultSprite);
   });
 });
 socket.on('gameOver', (state) => {
@@ -138,7 +151,7 @@ socket.on('newGame', (newGameState) => {
   hideGameOver();
 });
 
-// Preload sprite images
+// --- Preload Sprite Function ---
 function preloadSprite(url) {
   if (url && !spriteCache[url]) {
     const img = new Image();
@@ -152,7 +165,9 @@ const keys = {};
 document.addEventListener('keydown', (e) => { keys[e.code] = true; });
 document.addEventListener('keyup', (e) => { keys[e.code] = false; });
 
+// --- Game Logic Functions ---
 function update() {
+  // If this client (self) exists, update its position based on key presses.
   if (players[selfId]) {
     let speed = players[selfId].baseSpeed;
     if (sabotageActive) speed *= 0.5;
@@ -161,6 +176,7 @@ function update() {
     if (keys['ArrowDown'] || keys['KeyS']) { players[selfId].y += speed; }
     if (keys['ArrowLeft'] || keys['KeyA']) { players[selfId].x -= speed; }
     if (keys['ArrowRight'] || keys['KeyD']) { players[selfId].x += speed; }
+    // Emit the new position to the server.
     socket.emit('move', { x: players[selfId].x, y: players[selfId].y });
   }
 }
@@ -168,7 +184,7 @@ function update() {
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   
-  // Draw coin
+  // Draw the coin.
   if (coinImg.complete) {
     ctx.drawImage(coinImg, coin.x - 15, coin.y - 15, 30, 30);
   } else {
@@ -179,10 +195,10 @@ function draw() {
     ctx.closePath();
   }
   
-  // Draw players using NFT sprites
+  // Draw each player.
   for (let id in players) {
     const p = players[id];
-    const spriteImg = spriteCache[p.sprite];
+    const spriteImg = spriteCache[p.sprite] || spriteCache[defaultSprite];
     if (spriteImg && spriteImg.complete) {
       ctx.drawImage(spriteImg, p.x - 20, p.y - 20, 40, 40);
     } else {
@@ -192,6 +208,7 @@ function draw() {
       ctx.fill();
       ctx.closePath();
     }
+    // Draw wallet short ID and score.
     ctx.fillStyle = '#fff';
     ctx.font = '12px monospace';
     ctx.fillText(p.walletAddress.substring(0,6), p.x - 20, p.y - 25);
@@ -230,6 +247,7 @@ restartButton.addEventListener('click', () => {
   window.location.reload();
 });
 
+// --- Main Game Loop ---
 function gameLoop() {
   update();
   draw();
