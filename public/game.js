@@ -4,10 +4,8 @@
 const socket = io();
 let walletAddress = localStorage.getItem('walletAddress'); // Set in login.js
 if (!walletAddress) {
-  // If no wallet address is found, redirect back to login.
   window.location.href = 'login.html';
 }
-
 let localVoiceStream = null;
 const voicePeers = {}; // For voice chat
 
@@ -22,15 +20,22 @@ const pttIndicator = document.getElementById('pttIndicator');
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
+// --- Fullscreen Canvas Setup ---
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
 // --- Asset Loading ---
 const coinImg = new Image();
 coinImg.src = 'assets/coin.png';
-// For this demo, we use the single example image for players:
-const defaultSprite = 'assets/kasperexample.png';
+const defaultSprite = 'assets/kasperexample.png'; // Single example image for all players
 
 // --- Game State Variables ---
 let selfId = null;
-const players = {};  // key: socket id, value: { x, y, walletAddress, score, energy, sprite, baseSpeed }
+const players = {};  // key: socket.id, value: { x, y, walletAddress, score, energy, sprite, baseSpeed }
 let coin = { x: 0, y: 0 };
 let gameTimeLeft = 0;
 let sabotageActive = false;
@@ -40,7 +45,6 @@ const spriteCache = {};
 async function initVoiceChat() {
   try {
     localVoiceStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-    // Disable audio by default (push-to-talk)
     localVoiceStream.getAudioTracks().forEach(track => track.enabled = false);
     console.log("Voice stream obtained");
   } catch (err) {
@@ -49,7 +53,7 @@ async function initVoiceChat() {
 }
 initVoiceChat();
 
-// Create a voice peer connection using SimplePeer.
+// --- Create Voice Peer Connection ---
 function createVoicePeer(peerId, initiator) {
   if (!localVoiceStream) return;
   const peer = new SimplePeer({
@@ -102,13 +106,10 @@ socket.on('voiceSignal', (data) => {
   voicePeers[fromId].signal(data.signal);
 });
 socket.on('playerJoined', (data) => {
-  // When a player joins, add them to our players object.
   players[data.id] = data.player;
-  // Preload their sprite image.
   preloadSprite(data.player.sprite || defaultSprite);
-  // Initiate voice chat if not self.
   if (localVoiceStream && data.id !== selfId) {
-    const initiator = selfId < data.id; // Arbitrary rule.
+    const initiator = selfId < data.id;
     createVoicePeer(data.id, initiator);
   }
 });
@@ -125,9 +126,7 @@ socket.on('playerLeft', (data) => {
     delete voicePeers[data.id];
   }
 });
-socket.on('coinRespawn', (newCoin) => {
-  coin = newCoin;
-});
+socket.on('coinRespawn', (newCoin) => { coin = newCoin; });
 socket.on('sabotage', (data) => {
   sabotageActive = data.active;
   sabotageNoticeDiv.textContent = sabotageActive ? "Sabotage Active!" : "";
@@ -151,7 +150,7 @@ socket.on('newGame', (newGameState) => {
   hideGameOver();
 });
 
-// --- Preload Sprite Function ---
+// --- Preload Sprite Images ---
 function preloadSprite(url) {
   if (url && !spriteCache[url]) {
     const img = new Image();
@@ -165,9 +164,7 @@ const keys = {};
 document.addEventListener('keydown', (e) => { keys[e.code] = true; });
 document.addEventListener('keyup', (e) => { keys[e.code] = false; });
 
-// --- Game Logic Functions ---
 function update() {
-  // If this client (self) exists, update its position based on key presses.
   if (players[selfId]) {
     let speed = players[selfId].baseSpeed;
     if (sabotageActive) speed *= 0.5;
@@ -176,7 +173,6 @@ function update() {
     if (keys['ArrowDown'] || keys['KeyS']) { players[selfId].y += speed; }
     if (keys['ArrowLeft'] || keys['KeyA']) { players[selfId].x -= speed; }
     if (keys['ArrowRight'] || keys['KeyD']) { players[selfId].x += speed; }
-    // Emit the new position to the server.
     socket.emit('move', { x: players[selfId].x, y: players[selfId].y });
   }
 }
@@ -184,7 +180,7 @@ function update() {
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   
-  // Draw the coin.
+  // Draw coin
   if (coinImg.complete) {
     ctx.drawImage(coinImg, coin.x - 15, coin.y - 15, 30, 30);
   } else {
@@ -195,7 +191,7 @@ function draw() {
     ctx.closePath();
   }
   
-  // Draw each player.
+  // Draw players
   for (let id in players) {
     const p = players[id];
     const spriteImg = spriteCache[p.sprite] || spriteCache[defaultSprite];
@@ -208,7 +204,6 @@ function draw() {
       ctx.fill();
       ctx.closePath();
     }
-    // Draw wallet short ID and score.
     ctx.fillStyle = '#fff';
     ctx.font = '12px monospace';
     ctx.fillText(p.walletAddress.substring(0,6), p.x - 20, p.y - 25);
