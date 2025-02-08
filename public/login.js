@@ -5,9 +5,7 @@ document.getElementById('loginButton').addEventListener('click', async () => {
     const accounts = await window.kasware.getAccounts();
     if (accounts && accounts.length > 0) {
       const walletAddress = accounts[0];
-      // Save wallet address for use in the game page
       localStorage.setItem('walletAddress', walletAddress);
-      // Redirect to the game page
       window.location.href = 'game.html';
     }
   } catch (err) {
