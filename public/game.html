@@ -14,6 +14,8 @@
       background-size: cover;
       overflow: hidden;
       color: #fff;
+      height: 100%;
+      width: 100%;
     }
     /* Container for the game */
     #gameContainer {
@@ -21,13 +23,14 @@
       width: 100vw;
       height: 100vh;
     }
-    /* Game Canvas */
-    canvas {
-      display: block;
+    /* Game Canvas: Fill container */
+    #gameCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
       background: rgba(0, 0, 0, 0.8);
-      margin: auto;
-      border: 2px solid #7bf8f9;
-      border-radius: 10px;
     }
     /* Scoreboard Styles */
     #scoreboard {
@@ -116,7 +119,7 @@
     <!-- Push-to-Talk Indicator -->
     <div id="pttIndicator">Talking...</div>
     <!-- Game Canvas -->
-    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <canvas id="gameCanvas"></canvas>
   </div>
   <!-- Socket.IO Library -->
   <script src="/socket.io/socket.io.js"></script>
