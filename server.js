@@ -37,9 +37,10 @@ let game = {
 };
 
 function assignRandomSprite() {
-  const num = Math.floor(Math.random() * 1000) + 1;
-  return `assets/nfts/${num}.png`;
+  // For now, always use the example image.
+  return 'assets/kasperexample.png';
 }
+
 
 function respawnCoin() {
   game.coin.x = Math.random() * 800;
