@@ -15,11 +15,13 @@
       overflow: hidden;
       color: #fff;
     }
+    /* Container for the game */
     #gameContainer {
       position: relative;
       width: 100vw;
       height: 100vh;
     }
+    /* Game Canvas */
     canvas {
       display: block;
       background: rgba(0, 0, 0, 0.8);
@@ -27,7 +29,7 @@
       border: 2px solid #7bf8f9;
       border-radius: 10px;
     }
-    /* Scoreboard */
+    /* Scoreboard Styles */
     #scoreboard {
       position: absolute;
       top: 10px;
@@ -113,12 +115,14 @@
     </div>
     <!-- Push-to-Talk Indicator -->
     <div id="pttIndicator">Talking...</div>
-    <!-- Canvas -->
+    <!-- Game Canvas -->
     <canvas id="gameCanvas" width="800" height="600"></canvas>
   </div>
+  <!-- Socket.IO Library -->
   <script src="/socket.io/socket.io.js"></script>
-  <!-- Include SimplePeer for voice chat -->
+  <!-- SimplePeer for Voice Chat -->
   <script src="https://cdn.jsdelivr.net/npm/simple-peer@9.11.0/simplepeer.min.js"></script>
+  <!-- Main Game Logic -->
   <script src="game.js"></script>
 </body>
 </html>
