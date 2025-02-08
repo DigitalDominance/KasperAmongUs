@@ -7,7 +7,7 @@ if (!walletAddress) {
   window.location.href = 'login.html';
 }
 let localVoiceStream = null;
-const voicePeers = {}; // For voice chat
+const voicePeers = {};
 
 // --- DOM Elements ---
 const scoreboardDiv = document.getElementById('scores');
@@ -31,11 +31,11 @@ window.addEventListener('resize', resizeCanvas);
 // --- Asset Loading ---
 const coinImg = new Image();
 coinImg.src = 'assets/coin.png';
-const defaultSprite = 'assets/kasperexample.png'; // Single example image for all players
+const defaultSprite = 'assets/kasperexample.png'; // All players use this for demo
 
 // --- Game State Variables ---
 let selfId = null;
-const players = {};  // key: socket.id, value: { x, y, walletAddress, score, energy, sprite, baseSpeed }
+const players = {};  // key: socket.id, value: { x, y, walletAddress, score, energy, sprite, baseSpeed, role, alive, tasksCompleted }
 let coin = { x: 0, y: 0 };
 let gameTimeLeft = 0;
 let sabotageActive = false;
@@ -159,6 +159,38 @@ function preloadSprite(url) {
   }
 }
 
+// --- Additional Among Us Controls ---
+// Imposter Kill: Press "K" to kill a nearby crewmate.
+document.addEventListener('keydown', (e) => {
+  if (e.code === 'KeyK') {
+    const me = players[selfId];
+    if (me && me.alive && me.role === 'imposter') {
+      for (let id in players) {
+        if (id !== selfId) {
+          const target = players[id];
+          if (target.alive && target.role === 'crewmate') {
+            const dx = me.x - target.x;
+            const dy = me.y - target.y;
+            const dist = Math.hypot(dx, dy);
+            if (dist < 50) { // kill range
+              socket.emit('kill', { targetId: id });
+              break;
+            }
+          }
+        }
+      }
+    }
+  }
+  // Task Completion: Press "T" to complete a task (for crewmates)
+  if (e.code === 'KeyT') {
+    const me = players[selfId];
+    if (me && me.alive && me.role === 'crewmate') {
+      me.tasksCompleted += 1;
+      socket.emit('taskCompleted', { tasks: me.tasksCompleted });
+    }
+  }
+});
+
 // --- Movement Controls ---
 const keys = {};
 document.addEventListener('keydown', (e) => { keys[e.code] = true; });
@@ -194,20 +226,29 @@ function draw() {
   // Draw players
   for (let id in players) {
     const p = players[id];
+    // If dead, lower opacity.
+    if (!p.alive) ctx.globalAlpha = 0.5;
     const spriteImg = spriteCache[p.sprite] || spriteCache[defaultSprite];
     if (spriteImg && spriteImg.complete) {
       ctx.drawImage(spriteImg, p.x - 20, p.y - 20, 40, 40);
     } else {
       ctx.beginPath();
       ctx.arc(p.x, p.y, 20, 0, Math.PI * 2);
-      ctx.fillStyle = (id === selfId) ? 'cyan' : 'magenta';
+      // Different color if imposter vs crewmate
+      ctx.fillStyle = p.role === 'imposter' ? 'red' : 'blue';
       ctx.fill();
       ctx.closePath();
     }
+    // Draw wallet short ID and score
     ctx.fillStyle = '#fff';
     ctx.font = '12px monospace';
     ctx.fillText(p.walletAddress.substring(0,6), p.x - 20, p.y - 25);
     ctx.fillText(`Score: ${p.score}`, p.x - 20, p.y + 35);
+    // Draw task count for crewmates
+    if (p.role === 'crewmate' && p.alive) {
+      ctx.fillText(`Tasks: ${p.tasksCompleted}`, p.x - 20, p.y + 50);
+    }
+    ctx.globalAlpha = 1.0;
   }
   updateScoreboard(players, gameTimeLeft);
 }
@@ -216,7 +257,7 @@ function updateScoreboard(playersState, timeLeft) {
   const sorted = Object.values(playersState).sort((a, b) => b.score - a.score);
   let html = '<ul style="list-style:none; margin:0; padding:0;">';
   sorted.forEach(p => {
-    html += `<li>${p.walletAddress.substring(0,6)}: ${p.score} pts</li>`;
+    html += `<li>${p.walletAddress.substring(0,6)} (${p.role}) - ${p.score} pts</li>`;
   });
   html += '</ul>';
   scoreboardDiv.innerHTML = html;
@@ -227,7 +268,7 @@ function showGameOver(playersState) {
   let html = '<h2>Final Scores</h2><ul style="list-style:none; margin:0; padding:0;">';
   const sorted = Object.values(playersState).sort((a, b) => b.score - a.score);
   sorted.forEach(p => {
-    html += `<li>${p.walletAddress.substring(0,6)}: ${p.score} pts</li>`;
+    html += `<li>${p.walletAddress.substring(0,6)} (${p.role}) - ${p.score} pts, Tasks: ${p.tasksCompleted}</li>`;
   });
   html += '</ul>';
   finalScoresDiv.innerHTML = html;
