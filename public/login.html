@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Login - KASPER the Ghost</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap" rel="stylesheet">
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      font-family: 'Roboto Mono', monospace;
+      background: url('assets/kasperbg.png') no-repeat center center fixed;
+      background-size: cover;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      color: #fff;
+    }
+    #loginContainer {
+      background: rgba(0,0,0,0.85);
+      padding: 2rem;
+      border: 2px solid #7bf8f9;
+      border-radius: 10px;
+      text-align: center;
+    }
+    #loginContainer h1 {
+      margin-bottom: 1rem;
+      font-size: 2rem;
+      color: #7bf8f9;
+      text-shadow: 2px 2px 5px rgba(0,0,0,0.7);
+    }
+    #loginButton {
+      padding: 0.75rem 1.5rem;
+      background: #7bf8f9;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: transform 0.3s ease;
+    }
+    #loginButton:hover {
+      transform: scale(1.05);
+    }
+  </style>
+</head>
+<body>
+  <div id="loginContainer">
+    <h1>Welcome to KASPER</h1>
+    <p>Connect your Kasware wallet to enter the ghostly realm.</p>
+    <button id="loginButton">Connect Wallet</button>
+  </div>
+  <script src="login.js"></script>
+</body>
+</html>
