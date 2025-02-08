@@ -1,15 +1,24 @@
-// public/login.js
+// frontend/src/login.js
+
 document.getElementById('loginButton').addEventListener('click', async () => {
-  try {
-    // Assume Kasware wallet API is available as window.kasware
-    const accounts = await window.kasware.getAccounts();
-    if (accounts && accounts.length > 0) {
-      const walletAddress = accounts[0];
-      localStorage.setItem('walletAddress', walletAddress);
-      window.location.href = 'game.html';
+  if (window.kasware) {
+    try {
+      const accounts = await window.kasware.requestAccounts();
+      if (accounts && accounts.length > 0) {
+        const walletAddress = accounts[0];
+        console.log("Connected wallet:", walletAddress);
+        // Save the wallet address for later use (for example, in game.html)
+        localStorage.setItem('walletAddress', walletAddress);
+        // Redirect to the game page
+        window.location.href = 'game.html';
+      } else {
+        alert('No wallet accounts found.');
+      }
+    } catch (error) {
+      console.error('Error connecting wallet:', error);
+      alert('There was an error connecting your wallet. Please try again.');
     }
-  } catch (err) {
-    console.error("Failed to connect wallet:", err);
-    alert("Wallet connection failed. Please try again.");
+  } else {
+    alert('Please install KasWare Wallet to connect.');
   }
 });
