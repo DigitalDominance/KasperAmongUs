@@ -2,130 +2,60 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>KASPER Among Us Multiplayer</title>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap" rel="stylesheet">
+  <title>KASPER FPS Multiplayer</title>
   <style>
-    /* Global Styles */
-    body, html {
-      margin: 0;
-      padding: 0;
-      font-family: 'Roboto Mono', monospace;
-      background: url('assets/kasperbg.png') no-repeat center center fixed;
-      background-size: cover;
-      overflow: hidden;
-      color: #fff;
-      height: 100%;
-      width: 100%;
-    }
-    /* Game Container */
-    #gameContainer {
-      position: relative;
-      width: 100vw;
-      height: 100vh;
-    }
-    /* Fullscreen Canvas */
-    #gameCanvas {
+    body { margin: 0; overflow: hidden; }
+    canvas { display: block; }
+    /* Pointer lock overlay */
+    #blocker {
       position: absolute;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0, 0, 0, 0.8);
+      background-color: rgba(0,0,0,0.5);
+      z-index: 100;
     }
-    /* Scoreboard */
-    #scoreboard {
+    #instructions {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      text-align: center;
+      cursor: pointer;
+      z-index: 101;
+    }
+    /* Simple scoreboard (non-3D overlay) */
+    #scoreboardOverlay {
       position: absolute;
       top: 10px;
       right: 10px;
+      z-index: 200;
       background: rgba(0,0,0,0.7);
-      padding: 1rem;
-      border-radius: 8px;
-      font-size: 14px;
-      z-index: 100;
-    }
-    /* Sabotage Notice */
-    #sabotageNotice {
-      color: #ff5555;
-      font-weight: bold;
-      margin-top: 0.5rem;
-    }
-    /* Game Over Overlay */
-    #gameOverOverlay {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0,0,0,0.95);
-      z-index: 300;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      flex-direction: column;
-      opacity: 0;
-      transition: opacity 0.5s ease;
-    }
-    #gameOverOverlay.show {
-      opacity: 1;
-    }
-    #gameOverOverlay h1 {
-      font-size: 3rem;
-      margin-bottom: 1rem;
+      padding: 10px;
+      border-radius: 5px;
+      font-family: 'Roboto Mono', monospace;
       color: #7bf8f9;
-      text-shadow: 2px 2px 5px rgba(0,0,0,0.7);
-    }
-    #gameOverOverlay button {
-      padding: 0.75rem 1.5rem;
-      background: #7bf8f9;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      font-weight: bold;
-      transition: transform 0.3s ease;
-      margin-top: 1rem;
-    }
-    #gameOverOverlay button:hover {
-      transform: scale(1.05);
-    }
-    /* Push-to-Talk Indicator */
-    #pttIndicator {
-      position: absolute;
-      bottom: 20px;
-      left: 20px;
-      background: rgba(123,248,249,0.8);
-      padding: 0.5rem 1rem;
-      border-radius: 5px;
-      font-weight: bold;
-      display: none;
-      z-index: 150;
     }
   </style>
 </head>
 <body>
-  <div id="gameContainer">
-    <!-- Scoreboard -->
-    <div id="scoreboard">
-      <h3>Scoreboard</h3>
-      <div id="scores">Waiting for players...</div>
-      <div id="timeLeft"></div>
-      <div id="sabotageNotice"></div>
+  <div id="blocker">
+    <div id="instructions">
+      <span style="font-size:40px">Click to play FPS</span><br>
+      Move: WASD, Look: Mouse, Jump: Space, Shoot: Mouse click
     </div>
-    <!-- Game Over Overlay -->
-    <div id="gameOverOverlay">
-      <h1>Game Over!</h1>
-      <div id="finalScores"></div>
-      <button id="restartButton">Play Again</button>
-    </div>
-    <!-- Push-to-Talk Indicator -->
-    <div id="pttIndicator">Talking...</div>
-    <!-- Canvas -->
-    <canvas id="gameCanvas"></canvas>
   </div>
-  <!-- Socket.IO Library -->
+  <!-- The Three.js canvas will be injected here by our script -->
+  <div id="scoreboardOverlay">Scoreboard</div>
+  <!-- Include Three.js and PointerLockControls -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://threejs.org/examples/js/controls/PointerLockControls.js"></script>
+  <!-- Socket.IO -->
   <script src="/socket.io/socket.io.js"></script>
-  <!-- SimplePeer for Voice Chat -->
-  <script src="https://cdn.jsdelivr.net/npm/simple-peer@9.11.0/simplepeer.min.js"></script>
-  <!-- Main Game Logic -->
-  <script src="game.js"></script>
+  <!-- Our FPS game logic -->
+  <script src="fpsGame.js"></script>
 </body>
 </html>
