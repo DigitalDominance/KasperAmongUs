@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>KASPER the Ghost Multiplayer</title>
+  <title>KASPER Among Us Multiplayer</title>
   <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap" rel="stylesheet">
   <style>
     /* Global Styles */
@@ -17,13 +17,13 @@
       height: 100%;
       width: 100%;
     }
-    /* Container for the game */
+    /* Game Container */
     #gameContainer {
       position: relative;
       width: 100vw;
       height: 100vh;
     }
-    /* Game Canvas: Fill container */
+    /* Fullscreen Canvas */
     #gameCanvas {
       position: absolute;
       top: 0;
@@ -32,12 +32,12 @@
       height: 100%;
       background: rgba(0, 0, 0, 0.8);
     }
-    /* Scoreboard Styles */
+    /* Scoreboard */
     #scoreboard {
       position: absolute;
       top: 10px;
       right: 10px;
-      background: rgba(0, 0, 0, 0.7);
+      background: rgba(0,0,0,0.7);
       padding: 1rem;
       border-radius: 8px;
       font-size: 14px;
@@ -56,7 +56,7 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0, 0, 0, 0.95);
+      background: rgba(0,0,0,0.95);
       z-index: 300;
       display: flex;
       justify-content: center;
@@ -92,7 +92,7 @@
       position: absolute;
       bottom: 20px;
       left: 20px;
-      background: rgba(123, 248, 249, 0.8);
+      background: rgba(123,248,249,0.8);
       padding: 0.5rem 1rem;
       border-radius: 5px;
       font-weight: bold;
@@ -118,7 +118,7 @@
     </div>
     <!-- Push-to-Talk Indicator -->
     <div id="pttIndicator">Talking...</div>
-    <!-- Game Canvas -->
+    <!-- Canvas -->
     <canvas id="gameCanvas"></canvas>
   </div>
   <!-- Socket.IO Library -->
