@@ -33,14 +33,19 @@ let game = {
   coin: { x: Math.random() * 800, y: Math.random() * 600 },
   startTime: Date.now(),
   duration: GAME_DURATION,
-  players: {} // key: socket.id => { walletAddress, x, y, score, energy, sprite, baseSpeed }
+  players: {} // key: socket.id => { walletAddress, x, y, score, energy, sprite, baseSpeed, role, alive, tasksCompleted }
 };
 
 function assignRandomSprite() {
-  // For now, always use the example image.
+  // For now, always use our single example image.
   return 'assets/kasperexample.png';
 }
 
+// When a player logs in, assign a random role:
+// 20% chance of being an imposter, otherwise crewmate.
+function assignRole() {
+  return Math.random() < 0.2 ? "imposter" : "crewmate";
+}
 
 function respawnCoin() {
   game.coin.x = Math.random() * 800;
@@ -53,7 +58,7 @@ function checkCollision(player, coin) {
   return Math.hypot(dx, dy) < 30;
 }
 
-// Sabotage: every 30 seconds trigger a 5-second slowdown
+// Sabotage event (for demo, same as before)
 setInterval(() => {
   sabotageActive = true;
   io.emit('sabotage', { active: true, duration: 5000 });
@@ -65,12 +70,12 @@ setInterval(() => {
   }, 5000);
 }, 30000);
 
-// Main game loop
+// Main game loop: update coin collision and energy drain
 setInterval(async () => {
   const timeLeft = game.duration - (Date.now() - game.startTime);
   if (timeLeft <= 0) {
     io.emit('gameOver', { players: game.players });
-    // Save scores to MongoDB and update weeklyScore as well
+    // Save scores (both lifetime and weekly)
     for (let socketId in game.players) {
       const { walletAddress, score } = game.players[socketId];
       await Player.findOneAndUpdate(
@@ -93,15 +98,16 @@ setInterval(async () => {
       io.emit('newGame', game);
     }, 10000);
   } else {
+    // Check for coin collection for every player
     for (let socketId in game.players) {
       const player = game.players[socketId];
-      if (checkCollision(player, game.coin)) {
+      if (player.alive && checkCollision(player, game.coin)) {
         player.score += 1;
         player.energy = Math.min(player.energy + 10, 100);
         respawnCoin();
         io.emit('coinRespawn', game.coin);
       }
-      if (player.energy > 0) {
+      if (player.alive && player.energy > 0) {
         player.energy -= 0.05;
       }
     }
@@ -124,6 +130,7 @@ io.on('connection', (socket) => {
       { upsert: true, new: true }
     );
     const sprite = assignRandomSprite();
+    const role = assignRole();
     game.players[socket.id] = {
       walletAddress,
       x: 400,
@@ -131,7 +138,10 @@ io.on('connection', (socket) => {
       score: 0,
       energy: 100,
       sprite,
-      baseSpeed: 5
+      baseSpeed: 5,
+      role,
+      alive: true,
+      tasksCompleted: 0
     };
     io.emit('playerJoined', { id: socket.id, player: game.players[socket.id] });
   });
@@ -144,6 +154,25 @@ io.on('connection', (socket) => {
       game.players[socket.id].x = data.x;
       game.players[socket.id].y = data.y;
       socket.broadcast.emit('playerMoved', { id: socket.id, x: data.x, y: data.y });
+    }
+  });
+  
+  // Imposter kill event: targetId is the player to kill.
+  socket.on('kill', (data) => {
+    const targetId = data.targetId;
+    if (game.players[targetId] && game.players[targetId].alive) {
+      game.players[targetId].alive = false;
+      io.emit('playerKilled', { id: targetId });
+      console.log(`Player ${targetId} was killed by ${socket.id}`);
+    }
+  });
+  
+  // Task completion event (for crewmates)
+  socket.on('taskCompleted', (data) => {
+    if (game.players[socket.id] && game.players[socket.id].alive && game.players[socket.id].role === "crewmate") {
+      game.players[socket.id].tasksCompleted = data.tasks;
+      io.emit('playerTaskUpdate', { id: socket.id, tasks: data.tasks });
+      console.log(`Player ${socket.id} completed task ${data.tasks}`);
     }
   });
   
@@ -165,7 +194,6 @@ io.on('connection', (socket) => {
 // -----------------------
 app.get('/api/leaderboard', async (req, res) => {
   try {
-    // Return top 20 players by weeklyScore (descending)
     const topPlayers = await Player.find().sort({ weeklyScore: -1 }).limit(20);
     res.json({ success: true, players: topPlayers });
   } catch (err) {
@@ -176,7 +204,6 @@ app.get('/api/leaderboard', async (req, res) => {
 // -----------------------
 // WEEKLY SCORE RESET CRON JOB
 // -----------------------
-// Reset weeklyScore every Sunday at midnight (server time)
 cron.schedule('0 0 * * 0', async () => {
   try {
     await Player.updateMany({}, { $set: { weeklyScore: 0 } });
