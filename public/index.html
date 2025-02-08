@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>KASPER the Ghost Multiplayer</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: #000;
+      font-family: 'Roboto Mono', monospace;
+      color: #fff;
+    }
+    #loginDiv {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 100;
+    }
+    #loginButton {
+      padding: 0.5rem 1rem;
+      background: #7bf8f9;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: transform 0.3s ease;
+    }
+    #loginButton:hover {
+      transform: scale(1.05);
+    }
+    #scoreboard {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 1rem;
+      border-radius: 8px;
+      font-size: 14px;
+      z-index: 100;
+    }
+    canvas {
+      display: block;
+      margin: auto;
+      background: #111;
+    }
+  </style>
+</head>
+<body>
+  <div id="loginDiv">
+    <button id="loginButton">Connect Kasware Wallet</button>
+    <span id="walletAddress"></span>
+  </div>
+  <div id="scoreboard">
+    <h3>Scoreboard</h3>
+    <div id="scores">Waiting for players...</div>
+    <div id="timeLeft"></div>
+    <div id="sabotageNotice" style="color: red; font-weight: bold;"></div>
+  </div>
+  <canvas id="gameCanvas" width="800" height="600"></canvas>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="index.js"></script>
+</body>
+</html>
